@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>2D Draw - HW1</title>
+    <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+    <!--  ************** Vertex Shader ************* --> 
+    <script id="shader-vs" type="x-shader/x-vertex">
+        // VERTEX Shader
+
+        attribute vec4 aPosition;
+        uniform float uAspectRatio;
+        uniform vec2 uOffset; 
+
+        void main() {
+            gl_PointSize = 5.0;
+            
+            // temp vec4 to fix axis scaling in case of uneven aspect ratio
+            vec4 a = aPosition;
+            
+            // re-scale x-axis if window width > height
+            if(uAspectRatio > 1.0){
+                a.x = a.x / uAspectRatio;
+            }
+            
+            // re-scale y-axis if window width < height
+            if(uAspectRatio < 1.0){
+                a.y = a.y / (1.0/uAspectRatio);
+            }
+
+            gl_Position = a + vec4(uOffset, 0, 0);
+        }
+        </script>
+    <!--  ************** Fragment Shader ************* -->
+    <script id="shader-fs" type="x-shader/x-fragment">
+        // FRAGMENT Shader
+        precision mediump float;
+ 
+        uniform vec4 uColor;
+        
+        void main() {
+            gl_FragColor = uColor;
+        }
+    </script>
+    <script type="text/javascript" src="shader_setup.js"></script>
+    <script type="text/javascript" src="2d-figures.js"></script>
+    <script type="text/javascript" src="draw.js"></script>
+    <style type="text/css">
+        html, body {
+            /* Removing borders and window scrolling */
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body">
+    <canvas id="draw-canvas"></canvas>
+</body>
+</html>

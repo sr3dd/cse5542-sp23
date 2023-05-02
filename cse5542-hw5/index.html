@@ -1,0 +1,169 @@
+
+<!DOCTYPE html>
+
+<html>
+
+<head>
+<title>WebGL &mdash; lab5 </title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">   
+
+<script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
+<script type="text/javascript" src="ui_utils.js"></script>
+<script type="text/javascript" src="settings.js"></script>
+<script type="text/javascript" src="utils.js"></script>
+<script type="text/javascript" src="gl_utils.js"></script>
+<script type="text/javascript" src="texture.js"></script>
+
+<!--  ************** Vertex Shader ************* --> 
+<script id="shader-vs" type="x-shader/x-vertex">
+
+    // Vertex Shader
+
+    attribute vec3 aPosition;
+    attribute vec3 aNormal;
+    attribute vec2 aTexture;
+
+    uniform mat4 uMVMatrix; 
+    uniform mat4 uVMatrix;
+    uniform mat4 uPMatrix;
+    uniform mat4 uNMatrix;
+
+    uniform vec4 lPosition;
+  
+    varying vec3 vNormal; 
+    varying vec3 L;
+    varying vec3 E; 
+    varying vec2 tex;
+
+    void main(void) {    
+        gl_PointSize = 5.0;
+
+        tex = aTexture;
+
+        // Light Postion: world --> eye 
+        vec4 light_pos_in_eye = uVMatrix*lPosition;
+
+        vNormal = normalize(vec3(uNMatrix*vec4(aNormal, 0.0)));
+
+        // eye space 
+        vec4 ePosition = uMVMatrix * vec4(aPosition, 1.0);
+
+        // eye vector
+        E = normalize(-vec3(ePosition));
+
+        // light vector
+        L = normalize(vec3(light_pos_in_eye - ePosition));
+
+        gl_Position = uPMatrix*uMVMatrix*vec4(aPosition, 1.0);
+    }
+</script>
+
+<!--  ************** Fragment Shader ************* --> 
+<script id="shader-fs" type="x-shader/x-fragment">
+
+    // Fragment Shader
+
+    precision mediump float;
+    precision mediump int;
+
+    // from Vertex Shader
+    varying vec3 vNormal; 
+    varying vec3 L;
+    varying vec3 E;  
+    varying vec2 tex;
+
+    // material properties
+    uniform vec4 aCoeff;
+    uniform vec4 dCoeff;
+    uniform vec4 sCoeff;
+    uniform float mat_shininess;
+
+    uniform vec4 light_color;
+
+    uniform mat4 uV2WMatrix;
+
+    uniform int use_texture;
+    uniform sampler2D myTexture;
+    uniform samplerCube cubeMap;
+
+    void main(void) {
+        vec4 texColor = texture2D(myTexture, tex); 
+
+        vec3 v = normalize(vNormal);
+        vec3 l = normalize(L);
+        vec3 e = normalize(E);
+
+        vec4 ambient = aCoeff * light_color;
+
+        float ndotl = max(dot(v, l), 0.0);
+        vec4 diffuse = dCoeff * light_color * ndotl;
+
+        vec3 R = normalize(vec3(reflect(-l, v)));
+        float rdotv = max(dot(R, e), 0.0);
+
+        vec4 specular;
+        if (ndotl > 0.0)
+            specular = sCoeff * light_color * pow(rdotv, mat_shininess);
+        else 
+            specular = vec4(0,0,0,1);
+
+        // light only
+        if (use_texture ==0){
+            gl_FragColor = (ambient + diffuse) + specular;
+        }
+        // light + texture
+        else if (use_texture == 1){
+            gl_FragColor = (ambient + diffuse) * texColor + specular;
+        }
+        // texture only
+        else if (use_texture == 2){
+            gl_FragColor = texColor; 
+        } 
+        // environment cube mapping
+        else if (use_texture == 3){
+            vec3 ref = normalize(vec3(reflect(-e, v)));
+            ref = vec3(uV2WMatrix*vec4(ref, 0.0));
+            vec4 env_color = textureCube(cubeMap, ref);
+            gl_FragColor = env_color;
+        }
+    }
+</script>
+<script type="text/javascript" src="shaders_setup.js"></script>
+<script type="text/javascript" src="lab5.js"></script>
+</head>
+
+<body>
+    <canvas id="texture-canvas" style="border: none;" width="800" height="800"></canvas>
+    <div style="float:right">
+        <p >
+            W/S/A/D: move the tank fleet forward/backward/left/right</br>
+            ←/→: rotate the sentry tank only</br>
+            ↑/↓: rotate tank fleet</br>
+            P/p: Camera Pitch up/down (pitch)</br>
+            Y/y: Camera Yaw left/right (yaw)</br>
+            F/f: Camera zoom in/out </br>
+            R/r: Camera Rotate clockwise/counterwise</br>
+            j/J/k/K/l/L: Move light source along x, y and z axis</br> 
+            </br>
+        </p>
+
+        <h4>Tank Texture options:</h4>
+        <button onclick="ModeTank(0)">lighted</button>
+        <button onclick="ModeTank(2)">texture</button>
+        <button onclick="ModeTank(1)">lighted+texture</button>
+        <button onclick="ModeTank(3)">cubemap</button>
+        <h4>
+
+        <h4>Animation options:</h4>
+        <button onclick="ModeAnimate(0)">Off</button>
+        <button onclick="ModeAnimate(1)">Global patrol mode</button>
+        <button onclick="ModeAnimate(2)">Sentry mode</button>
+        <h4>
+
+        <h4>Misc.:</h4>
+        <button onclick="Reset()">Reset Scene</button>
+        <h4>
+    </div>
+</body>
+</html>
+

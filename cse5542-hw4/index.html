@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>3D Lighting - HW4</title>
+    <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+    <!--  ************** Vertex Shader ************* --> 
+    <script id="shader-vs" type="x-shader/x-vertex" src="shaders/vertex.glsl">
+        // VERTEX Shader
+        
+        attribute vec3 aPosition;
+        attribute vec3 aNormal;
+
+        uniform mat4 uModelViewMatrix;
+        uniform mat4 uProjectionMatrix;
+        uniform mat4 uNormalMatrix;
+
+        varying vec3 vNormalInterpolation;
+        varying vec3 vPosition;
+
+        void main() {
+            gl_PointSize = 5.0;
+            
+            vec4 mv_position = uModelViewMatrix * vec4(aPosition, 1.0);
+            vPosition = vec3(mv_position) / mv_position.w;
+            
+            // normal interpolation to compute lighting for each fragment
+            vNormalInterpolation = vec3(uNormalMatrix * vec4(aNormal, 1.0));
+
+            gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aPosition, 1.0);
+        }
+    </script>
+    <!--  ************** Fragment Shader ************* -->
+    <script id="shader-fs" type="x-shader/x-fragment" src="shaders/fragment.glsl">
+        // FRAGMENT Shader
+
+        precision mediump float;
+        
+        varying vec3 vNormalInterpolation;
+        varying vec3 vPosition;
+
+        // Material uniforms
+        uniform vec3 uAmbientCoeff;
+        uniform vec3 uDiffuseCoeff;
+        uniform vec3 uSpecularCoeff;
+        uniform float uShininess;
+
+        // Light uniforms
+        uniform vec3 uAmbientIntensity;
+        uniform vec3 uDiffuseIntensity;
+        uniform vec3 uSpecularIntensity;
+
+        uniform vec3 lPosition;
+        
+        void main() {
+            // normal vector
+            vec3 N = normalize(vNormalInterpolation);
+            // light vector
+            vec3 L = normalize(lPosition - vPosition);
+  
+            // Radiant energy calculation based on Lambert's law
+            float ndotl = max(dot(N, L), 0.0);
+            float specular = 0.0;
+            if(ndotl > 0.0) {
+                // Reflected vector
+                vec3 R = reflect(-L, N);
+                // vector to viewer
+                vec3 V = normalize(-vPosition);
+                // projection of R on V (cos)
+                float specAngle = max(dot(R, V), 0.0);
+                // (cos(phi))^n
+                specular = pow(specAngle, uShininess);
+            }
+            
+            gl_FragColor = vec4((uAmbientCoeff * uAmbientIntensity) +
+                                (uDiffuseCoeff * ndotl * uDiffuseIntensity) +
+                                (uSpecularCoeff * specular * uSpecularIntensity), 
+                                1.0);
+  
+        }
+    </script>
+
+    <script type="text/javascript" src="shader_setup.js"></script>
+    <script type="text/javascript" src="ui_utils.js"></script>
+    <script type="text/javascript" src="utils.js"></script>
+    <script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
+    <script type="text/javascript" src="3d_primitives.js"></script>
+    <script type="text/javascript" src="3d_lighting.js"></script>
+    <style type="text/css">
+        html, body {
+            /* Removing borders and window scrolling */
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+</head>
+<body">
+    <canvas id="3d_transform-canvas" style="border:none; "width="1000" height="1000"></canvas>
+    <h4> Geometry:  </h4>
+    <button  onclick="geometry(1)"> Lines</button>
+    <button  onclick="geometry(2)"> Triangles</button>
+    <p>
+        W/S/A/D: move the object forward/backward/left/right</br>
+        left/right arrow keys: rotate the cabin latch door for cabin access</br>
+        up/down arrow keys: rotate the cannon-mount </br>
+        P/p: pitch up/down</br>
+        Y/y: yaw left/right</br>
+        R/r: rotate camera clock/counterclock-wise</br>
+        J/j: Move light source along X-axis</br>
+        K/k: Move light source along Y-axis</br>
+        L/l: Move light source along Z-axis</br>
+        B/b: Move model along X-axis</br>
+        N/n: Move model along Y-axis</br>
+        M/m: Move model along Z-axis</br>
+    </p>
+</body>
+</html>
